@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Check if the correct number of arguments are provided
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <repository_name> <start_date> <end_date>"
+    exit 1
+fi
+
+repository_name=$1
+start_date=$2
+end_date=$3
+
+echo "Fetching pull requests for repository: $repository_name between $start_date and $end_date..."
+
+# Fetch pull requests and handle errors
+response=$(curl -s "https://api.github.com/repos/getndazn/$repository_name/pulls?state=all&sort=created&direction=asc&per_page=100&page=1")
+if [ $? -ne 0 ]; then
+    echo "Failed to fetch pull requests. HTTP request failed."
+    exit 1
+fi
+
+# Check if the response contains an error message
+error_message=$(echo "$response" | jq -r '.message')
+if [ "$error_message" != "null" ]; then
+    echo "Failed to fetch pull requests. Error message: $error_message"
+    exit 1
+fi
+
+# Extract pull request details
+pull_requests=$(echo "$response" | jq --arg start_date "$start_date" --arg end_date "$end_date" '
+    map(select((.created_at >= $start_date) and (.created_at <= $end_date))) | 
+    map({ 
+        title: .title, 
+        number: .number, 
+        state: .state, 
+        created_at: .created_at, 
+        url: .html_url 
+    })'
+)
+
+# Print the details of pull requests
+echo "$pull_requests" | jq .
+
