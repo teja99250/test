@@ -1,0 +1,73 @@
+fill up this shell script 
+
+#!/bin/bash
+
+# Check if all required arguments are provided
+if [ $# -ne 3 ]; then
+  echo "Usage: $0 <repository_name> <start_date> <end_date>"
+  exit 1
+fi
+
+# Set GitHub organization name
+ORGANIZATION="getndazn"
+
+# Set your GitHub Personal Access Token (PAT)
+TOKEN="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"
+
+# Set repository name and start/end dates
+REPO="$1"
+START_DATE="$2"
+END_DATE="$3"
+
+# Function to fetch pull requests within the specified date range
+fetch_pull_requests() {
+  local page=1
+  
+  while :; do
+    echo "Fetching page $page..."
+    local response=$(curl -s -H "Authorization: token $TOKEN" "https://api.github.com/repos/$ORGANIZATION/$REPO/pulls?state=all&page=$page")
+    echo "Response: $response"
+    
+    local response_code=$(echo "$response" | grep "< HTTP/" | awk '{print $3}')
+    
+    if [ "$response_code" != "200" ]; then
+      echo "Failed to fetch pull requests. HTTP status code: $response_code"
+      exit 1
+    fi
+
+    local error_message=$(echo "$response" | grep "errors\":")
+    if [ ! -z "$error_message" ]; then
+      echo "Failed to fetch pull requests. Error message: $error_message"
+      exit 1
+    fi
+    
+    local pr_count=$(echo "$response" | jq length)
+
+    for ((i = 0; i < pr_count; i++)); do
+      local pr_date=$(echo "$response" | jq -r ".[$i].created_at" | cut -d 'T' -f 1)
+      
+      # Check if the PR date is within the specified range
+      if [[ "$pr_date" > "$START_DATE" && "$pr_date" < "$END_DATE" ]]; then
+        local author_name=$(echo "$response" | jq -r ".[$i].user.login")
+        local date_of_pr=$(echo "$response" | jq -r ".[$i].created_at")
+        local pr_number=$(echo "$response" | jq -r ".[$i].number")
+        local lines_added=$(echo "$response" | jq ".[$i].additions")
+        local lines_removed=$(echo "$response" | jq ".[$i].deletions")
+        local commits=$(echo "$response" | jq ".[$i].commits")
+
+        echo "Author Name: $author_name, Date of PR: $date_of_pr, PR Number: $pr_number, Lines Added: $lines_added, Lines Removed: $lines_removed, Commits: $commits"
+      fi
+    done
+    
+    # Check if there are more pages
+    local link_header=$(echo "$response" | grep Link:)
+    if [ -z "$link_header" ]; then
+      break
+    else
+      page=$((page + 1))
+    fi
+  done
+}
+
+# Retrieve all pull requests and filter by date range
+fetch_pull_requests
