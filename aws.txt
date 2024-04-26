@@ -1,3 +1,0 @@
-this my aws text file
-after changing the user and email in the max git
-echo"working aws file" 
