@@ -58,6 +58,9 @@ fetch_pull_requests() {
         echo "Author Name: $author_name, Date of PR: $date_of_pr, PR Number: $pr_number, Lines Added: $lines_added, Lines Removed: $lines_removed, Commits: $commits"
       fi
     done
+ echo "Author Name: $author_name, Date of PR: $date_of_pr, PR Number: $pr_number, Lines Added: $lines_added, Lines Removed: $lines_removed, Commits: $commits"
+      fi
+    done
     
     # Check if there are more pages
     local link_header=$(echo "$response" | grep Link:)
@@ -71,6 +74,7 @@ fetch_pull_requests() {
 
 # Retrieve all pull requests and filter by date range
 fetch_pull_requests
+#iam just checking the bump version in the build 
 
 
 
